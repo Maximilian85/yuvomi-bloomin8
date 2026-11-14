@@ -1,0 +1,14 @@
+{
+  "manifestVersion": 1,
+  "id": "yuvomi-bloomin8",
+  "name": "BLOOMIN8 E-Ink",
+  "version": "0.2.0",
+  "entry": "index.js",
+  "style": "style.css",
+  "menu": {
+    "label": "BLOOMIN8"
+  },
+  "page": {
+    "title": "BLOOMIN8 E-Ink"
+  }
+}

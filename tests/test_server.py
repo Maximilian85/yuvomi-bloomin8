@@ -96,7 +96,7 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(err.exception.code, 403)
 
     def test_night_returns_204_in_body(self):
-        with patch.object(server, "sleeping", return_value=True):
+        with patch.object(server, "sleeping", return_value=True), patch.object(server, "next_wake", return_value=datetime.now(timezone.utc) + server.timedelta(minutes=30)):
             with self.request("/eink_pull?device_id=abc&pull_id=night", server.TOKEN) as r:
                 self.assertEqual(r.status, 200)
                 self.assertEqual(json.load(r)["status"], 204)

@@ -1,0 +1,18 @@
+services:
+  yuvomi-bloomin8:
+    build: ./service
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      EINK_PULL_TOKEN: ${EINK_PULL_TOKEN:?Set EINK_PULL_TOKEN}
+      EINK_DEVICE_ID: ${EINK_DEVICE_ID:?Set EINK_DEVICE_ID}
+      EINK_PUBLIC_URL: ${EINK_PUBLIC_URL:?Set EINK_PUBLIC_URL}
+      EINK_INTERVAL_MINUTES: ${EINK_INTERVAL_MINUTES:-30}
+      EINK_NIGHT_START: ${EINK_NIGHT_START:-21}
+      EINK_NIGHT_END: ${EINK_NIGHT_END:-6}
+    volumes:
+      - bloomin8-data:/app/data
+volumes:
+  bloomin8-data:

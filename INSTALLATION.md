@@ -1,3 +1,5 @@
+> **Hinweis (GHCR-Vorbereitung):** Das Projekt enthält jetzt einen GitHub-Actions-Workflow `.github/workflows/publish.yml`, der nach Übernahme in `main` das Image `ghcr.io/maximilian85/yuvomi-bloomin8:latest` bauen und veröffentlichen soll. **Noch nicht veröffentlicht oder als erfolgreich getestet.** Das GHCR-Paket muss nach dem ersten Build in GitHub unter Package settings auf **Public** gestellt werden. Danach kann Arcane `compose.arcane.yml` ohne SSH und ohne lokalen Docker-Build verwenden. Bis dahin gelten die folgenden manuellen Build-Schritte als Ausweichweg. Die GitHub-Actions-Testchecks sollten vor dem Merge erfolgreich sein.
+
 # Hardwaretest auf Synology NAS mit Arcane
 
 **Ziel:** BLOOMIN8 13,3" testweise per Schedule Pull von einem Docker-Container auf der Synology versorgen. Yuvomi bleibt unverändert. Der Dienst zeigt zunächst nur ein Testbild, **keine** Kalender-/Immich-/Wetterdaten.
@@ -31,7 +33,7 @@ Falls `git` auf der Synology nicht verfügbar ist, das Repository als ZIP auf ei
 
 ## 2. Arcane-Compose-Stack erstellen
 
-In Arcane einen **neuen, separaten Compose-Stack** erstellen (nicht den bestehenden Yuvomi-Stack überschreiben) und den Inhalt von `compose.arcane.yml` einfügen.
+In Arcane einen **neuen, separaten Compose-Stack** erstellen (nicht den bestehenden Yuvomi-Stack überschreiben) und den Inhalt von `compose.arcane.yml` einfügen. **Diese Datei erwartet inzwischen das veröffentlichte GHCR-Image.** Vor der ersten Veröffentlichung stattdessen das manuell gebaute Image `yuvomi-bloomin8:hardware-test` im Compose-Eintrag `image:` verwenden.
 
 In Arcane die folgenden Umgebungsvariablen für den Stack konfigurieren (falls Arcane Variableninterpolation anbietet), andernfalls lokal in einer nicht versionierten `.env` hinterlegen:
 

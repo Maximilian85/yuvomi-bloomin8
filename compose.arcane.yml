@@ -1,0 +1,15 @@
+# Arcane: deploy as a separate Compose stack after building the image on the Synology.
+services:
+  yuvomi-bloomin8:
+    image: yuvomi-bloomin8:hardware-test
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      EINK_PULL_TOKEN: ${EINK_PULL_TOKEN:?Set EINK_PULL_TOKEN in Arcane}
+      EINK_DEVICE_ID: ${EINK_DEVICE_ID:-}
+      EINK_PUBLIC_URL: ${EINK_PUBLIC_URL:?Set Synology LAN URL}
+      EINK_INTERVAL_MINUTES: ${EINK_INTERVAL_MINUTES:-30}
+      EINK_NIGHT_START: ${EINK_NIGHT_START:-21}
+      EINK_NIGHT_END: ${EINK_NIGHT_END:-6}

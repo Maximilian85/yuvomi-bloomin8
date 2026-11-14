@@ -1,0 +1,21 @@
+name: Test BLOOMIN8 MVP
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  python-and-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install pillow==11.3.0
+      - name: Unit and HTTP integration tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile server
+        run: python -m py_compile service/server.py
+      - name: Build container
+        run: docker build -t yuvomi-bloomin8:test ./service

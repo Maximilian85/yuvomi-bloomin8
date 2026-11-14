@@ -1,0 +1,15 @@
+# Arcane: paste as a separate stack. Publish the GHCR package publicly first.
+services:
+  yuvomi-bloomin8:
+    image: ghcr.io/maximilian85/yuvomi-bloomin8:latest
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      TZ: Europe/Berlin
+      EINK_PULL_TOKEN: ${EINK_PULL_TOKEN:?Set a random token of at least 24 characters}
+      EINK_DEVICE_ID: ${EINK_DEVICE_ID:-}
+      EINK_PUBLIC_URL: ${EINK_PUBLIC_URL:?Set http://SYNOLOGY_LAN_IP:8088}
+      EINK_INTERVAL_MINUTES: "30"
+      EINK_NIGHT_START: "21"
+      EINK_NIGHT_END: "6"

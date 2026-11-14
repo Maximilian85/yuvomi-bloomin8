@@ -1,140 +1,125 @@
-# Installation und BLOOMIN8-Hardwaretest (Linux Mint)
+# Hardwaretest auf Synology NAS mit Arcane
 
-**Status:** Pull-Protokoll-Test, noch kein produktives Yuvomi-Dashboard. Dieser Test zeigt ein eigenes Bild mit Datum/Uhrzeit. Kalender, Immich, Wetter und UI-Einstellungen sind noch nicht angebunden.
+**Ziel:** BLOOMIN8 13,3" testweise per Schedule Pull von einem Docker-Container auf der Synology versorgen. Yuvomi bleibt unverändert. Der Dienst zeigt zunächst nur ein Testbild, **keine** Kalender-/Immich-/Wetterdaten.
 
 ## Voraussetzungen
 
-- Linux Mint mit Docker Engine und Docker-Compose-Plugin (`docker compose version`)
-- BLOOMIN8 13,3" und Linux-Mint-Host im selben erreichbaren WLAN/LAN
-- IP-Adresse des Linux-Mint-Hosts (Beispiel `192.168.1.50`)
-- Gerät muss wach und im WLAN sein, um Pull-Einstellungen zu ändern
-- Port **8088/TCP** vom Rahmen zum Linux-Mint-Rechner erreichbar
-- **Keine Portfreigabe am Router** und keine öffentliche Exposition
+- Synology NAS als Docker-Host, Arcane verwaltet Docker-Compose-Stacks
+- Synology und BLOOMIN8 im gleichen erreichbaren LAN/WLAN
+- IP-Adresse der Synology und des BLOOMIN8-Rahmens
+- Für die **erste Image-Erstellung** Zugriff auf Docker CLI auf der Synology (SSH) **oder** eine Arcane-Funktion, die ein Repository mit Dockerfile bauen kann
+- TCP-Port 8088 von BLOOMIN8 zur Synology erreichbar; **keine Router-Portfreigabe**
+- Private GitHub-Repository-Berechtigung
 
-## 1. Code holen
+## 1. Container-Image bereitstellen
 
-Der Hardwaretest liegt zunächst im Entwicklungsbranch. Auf Linux Mint im Terminal:
+Es ist noch **kein veröffentlichtes Registry-Image** vorhanden. Deshalb muss das Image einmal aus dem Repository gebaut werden. Die folgende Variante funktioniert unabhängig davon, ob Arcane selbst einen Build-Kontext aus Git unterstützt.
+
+Auf der Synology per SSH (nur innerhalb des LANs, SSH nach Bedarf in DSM aktivieren):
 
 ```bash
 git clone --branch feature/bloomin8-pull-mvp https://github.com/Maximilian85/yuvomi-bloomin8.git
 cd yuvomi-bloomin8
-cp .env.example .env
+sudo docker build -t yuvomi-bloomin8:hardware-test ./service
 ```
 
-Bei einem privaten Repository benötigst du eine passende GitHub-Anmeldung (z.B. Git Credential Manager, GitHub CLI `gh auth login` oder SSH). Keine GitHub-Tokens in diesen Chat kopieren.
+Das Repository ist privat; Git verlangt eine gültige Anmeldung. **Keine Tokens in Arcane-Compose-Dateien, Git oder diesen Chat kopieren.**
 
-## 2. Konfiguration
+Falls `git` auf der Synology nicht verfügbar ist, das Repository als ZIP auf einem anderen Gerät herunterladen und den Ordner `service/` auf die Synology kopieren. Dann dort `docker build -t yuvomi-bloomin8:hardware-test /PFAD/ZUM/service` ausführen.
 
-LAN-IP des Hosts herausfinden:
+**Alternative:** Wenn deine Arcane-Version einen Git-Checkout mit Build-Kontext unterstützt, kannst du die Datei `compose.eink.yml` direkt aus dem Repository nutzen. Ob diese Funktion bei dir verfügbar ist, müssen wir in Arcane prüfen.
+
+## 2. Arcane-Compose-Stack erstellen
+
+In Arcane einen **neuen, separaten Compose-Stack** erstellen (nicht den bestehenden Yuvomi-Stack überschreiben) und den Inhalt von `compose.arcane.yml` einfügen.
+
+In Arcane die folgenden Umgebungsvariablen für den Stack konfigurieren (falls Arcane Variableninterpolation anbietet), andernfalls lokal in einer nicht versionierten `.env` hinterlegen:
+
+- `EINK_PULL_TOKEN`: zufälliger Wert mit mindestens 24 Zeichen, z. B. durch `openssl rand -hex 32`
+- `EINK_PUBLIC_URL`: `http://SYNOLOGY-LAN-IP:8088`
+- `EINK_DEVICE_ID`: beim ersten Test leer lassen; später aus Logs übernehmen
+- `TZ=Europe/Berlin`
+
+Andere Werte: `EINK_INTERVAL_MINUTES=30`, `EINK_NIGHT_START=21`, `EINK_NIGHT_END=6`.
+
+**Achtung:** Der Token darf nicht im Git-Repository landen. Arcane zeigt eventuell die Compose-Konfiguration für Administratoren an.
+
+Den Stack deployen. Die Synology-Firewall muss TCP 8088 aus dem lokalen Netz zulassen.
+
+## 3. Synology-Dienst prüfen
+
+Vom Rechner oder Handy im gleichen LAN:
+
+```text
+http://SYNOLOGY-LAN-IP:8088/health
+```
+
+Erwartet: `{"ok": true}`.
+
+Alternativ über Arcane die Container-Logs öffnen. Der Dienst muss laufen und auf Port 8088 lauschen.
+
+## 4. BLOOMIN8 konfigurieren
+
+Rahmen aufwecken, WLAN prüfen und seine IP ermitteln. **Die Konfiguration wird am Gerät vorgenommen**, nicht in Arcane.
+
+Zuerst die aktuelle Konfiguration abrufen:
 
 ```bash
-hostname -I
+curl http://RAHMEN-IP/upstream/pull_settings
 ```
 
-Ein langes zufälliges Token erzeugen:
-
-```bash
-openssl rand -hex 32
-```
-
-Datei `.env` mit Texteditor bearbeiten:
-
-```bash
-xed .env
-```
-
-- `EINK_PULL_TOKEN`: den erzeugten Wert einsetzen (mindestens 24 Zeichen)
-- `EINK_PUBLIC_URL`: `http://DEINE-LINUX-MINT-IP:8088` — **nicht** localhost oder Docker-Containername
-- `EINK_DEVICE_ID`: für den ersten Test **leer lassen**; der geheime Token schützt den Abruf. Später anhand der Serverlogs auf die Geräte-ID einschränken.
-- `EINK_INTERVAL_MINUTES=30`, `EINK_NIGHT_START=21`, `EINK_NIGHT_END=6`
-
-`.env` niemals in Git committen.
-
-## 3. Container starten
-
-```bash
-docker compose -f compose.eink.yml up -d --build
-docker compose -f compose.eink.yml ps
-curl -i http://127.0.0.1:8088/health
-```
-
-Erwartet: `HTTP/1.1 200 OK` und `{"ok": true}`.
-
-Falls Linux Mint eine Firewall aktiviert hat: ausschließlich im vertrauenswürdigen LAN TCP 8088 freigeben. Router-Portweiterleitung ist **nicht** erforderlich.
-
-## 4. Pull lokal simulieren
-
-```bash
-set -a; source .env; set +a
-curl -sS -H "X-Access-Token: $EINK_PULL_TOKEN" \
-  "http://127.0.0.1:8088/eink_pull?device_id=test-device&pull_id=manual-001&battery=90"
-```
-
-Tagsüber erwartet: JSON mit `"status":200`, `"type":"SHOW"`, `data.image_url` und `data.next_cron_time`. Zwischen 21:00 und 06:00 Ortszeit: `"status":204` und nächste Zeit ab 06:00.
-
-**Wichtig:** Der Bild-Link ist nur 15 Minuten gültig. Er enthält eine zeitlich begrenzte Signatur, nicht den Haupttoken. Der Rahmen muss den Link sofort laden.
-
-## 5. BLOOMIN8 aktivieren
-
-Geräte-IP ermitteln (Router oder BLOOMIN8-App). Das Gerät muss eingeschaltet/erreichbar sein.
-
-Auf Linux Mint zunächst die **Geräte-Einstellungen ansehen**:
-
-```bash
-curl -sS http://DEINE-RAHMEN-IP/upstream/pull_settings
-```
-
-Um den ersten Test unmittelbar auszulösen, eine UTC-Zeit ca. 2 Minuten in der Zukunft erzeugen:
+Für den Test eine UTC-Zeit etwa 2 Minuten in der Zukunft erzeugen:
 
 ```bash
 date -u -d '+2 minutes' +'%Y-%m-%dT%H:%M:%SZ'
 ```
 
-Die angezeigte Zeit und Werte in den folgenden Befehl eintragen. **Achtung:** Dadurch werden die Pull-Einstellungen des Rahmens verändert.
+Dann den Rahmen konfigurieren:
 
 ```bash
-curl -i -X PUT "http://DEINE-RAHMEN-IP/upstream/pull_settings" \
+curl -X PUT "http://RAHMEN-IP/upstream/pull_settings" \
   -H "Content-Type: application/json" \
-  --data '{"upstream_on":true,"upstream_url":"http://DEINE-LINUX-MINT-IP:8088","token":"DEIN_LANGES_TOKEN","cron_time":"2026-11-14T12:00:00Z"}'
+  --data '{"upstream_on":true,"upstream_url":"http://SYNOLOGY-LAN-IP:8088","token":"DEIN_LANGES_TOKEN","cron_time":"ZUKUENFTIGE-UTC-ZEIT"}'
 ```
 
-**Die Beispielzeit unbedingt ersetzen!** `cron_time` muss eine **zukünftige UTC-Zeit** mit `Z` sein. Token muss exakt mit `.env` übereinstimmen.
+**Beispielwerte ersetzen.** Die UTC-Zeit muss ISO 8601 mit `Z` sein, etwa `2026-11-14T15:30:00Z`. Der Token muss exakt dem Wert aus Arcane entsprechen.
 
-Anschließend:
+## 5. Ergebnis kontrollieren
 
-```bash
-docker compose -f compose.eink.yml logs -f --tail=100
-```
+In Arcane die Logs des BLOOMIN8-Containers öffnen.
 
-Erwartet: `GET /eink_pull`, dann `GET /images/dashboard_L.jpg`, optional `GET /eink_signal`. Auf dem Display erscheint ein Querformat-Testbild mit „Yuvomi BLOOMIN8“. Tagsüber erfolgt der nächste Abruf nach 30 Minuten; während der Nachtpause wird bis frühestens 06:00 gewartet.
+Erwartete Anfragen:
 
-Nach dem ersten Pull steht die Geräte-ID in der Logzeile `pull from device_id=...`. Optional in `.env` bei `EINK_DEVICE_ID` eintragen und Container neu starten.
+1. `GET /eink_pull` – Rahmen fragt nach dem Bild
+2. `GET /images/dashboard_L.jpg` – Rahmen lädt das JPEG
+3. Optional `GET /eink_signal` – Rahmen bestätigt das Ergebnis
 
-## 6. Fehlersuche
+Auf dem BLOOMIN8 erscheint ein Querformat-Testbild. Das Bild wird als Baseline-RGB-JPEG mit 1200×1600 Pixeln und `_L.jpg`-Suffix übertragen.
 
-- **Kein Pull:** Gerät schläft, WLAN nicht verbunden, falsche IP oder Startzeit liegt in der Vergangenheit. Geräteeinstellungen per GET prüfen.
-- **401:** Token in Rahmen und `.env` stimmt nicht überein.
-- **Bild fehlt:** LAN-IP oder Port 8088 vom Rahmen nicht erreichbar; Bildlink nach 15 Minuten abgelaufen; Host-Firewall.
-- **204 statt Bild:** geplante Nachtpause von 21:00 bis 06:00.
-- **Bild gedreht:** Foto des Displays und Firmwareversion notieren; die Bilddatei ist absichtlich 1200×1600 Pixel mit `_L.jpg`-Suffix.
-- **Containerfehler:** `docker compose -f compose.eink.yml logs --tail=100`.
-- **Prüfen, ob Bild ohne Redirect/Chunking ausgeliefert wird:** signierte `image_url` aus der JSON-Antwort unmittelbar mit `curl -I 'URL'` testen. `Content-Length` muss numerisch sein.
+Der nächste Pull wird auf 30 Minuten später geplant. Von 21:00 bis 06:00 Uhr (Europe/Berlin) wird kein neues Bild ausgeliefert.
+
+**Wichtig:** Die Bild-URL ist nur 15 Minuten gültig. Der Rahmen muss sie sofort abrufen.
+
+## 6. Fehlerbehebung
+
+- **Container startet nicht:** Arcane-Logs prüfen; existiert das lokal gebaute Image `yuvomi-bloomin8:hardware-test` auf demselben Docker-Host?
+- **Health-Endpunkt nicht erreichbar:** Synology-LAN-IP, Port 8088 und DSM-Firewall prüfen.
+- **401 beim Pull:** Token stimmt nicht überein.
+- **204 im JSON:** Nachtpause aktiv.
+- **Kein Bild trotz Pull:** Erreichbarkeit der Bild-URL und `Content-Length` prüfen; signierte URL nicht öffentlich teilen.
+- **Falsche Bildausrichtung:** Firmwareversion und Foto des Testbilds notieren.
+- **Kein Pull:** Rahmen möglicherweise im Standby, WLAN getrennt oder `cron_time` ungültig.
 
 ## 7. Test beenden
 
-Pull am Rahmen deaktivieren:
-
 ```bash
-curl -i -X PUT "http://DEINE-RAHMEN-IP/upstream/pull_settings" \
-  -H "Content-Type: application/json" --data '{"upstream_on":false}'
+curl -X PUT "http://RAHMEN-IP/upstream/pull_settings" \
+  -H "Content-Type: application/json" \
+  --data '{"upstream_on":false}'
 ```
 
-Danach Container stoppen:
+Anschließend in Arcane den BLOOMIN8-Stack stoppen.
 
-```bash
-docker compose -f compose.eink.yml down
-```
+## Testumfang und Einschränkungen
 
-## Was für den nächsten Entwicklungsschritt hilfreich ist
-
-Teile bei Problemen **bereinigte** Logs, die Firmwareversion, die sichtbare Bildorientierung und ob der Rahmen den nächsten Pull ausführt. Bitte keine Tokens, signierten Bild-URLs, privaten IPs (falls nicht gewünscht) oder Zugangsdaten veröffentlichen.
+Die Integrationstests liegen unter `tests/`, der GitHub-Actions-Workflow unter `.github/workflows/test.yml`. Ein erfolgreicher CI-Lauf und ein Test auf echter BLOOMIN8-Hardware sind noch **nicht bestätigt**. Das Yuvomi-Modul ist noch nicht als installierbar validiert. Bitte den Entwicklungs-Pull-Request noch nicht mergen und Port 8088 nicht ins Internet öffnen.

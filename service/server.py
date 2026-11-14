@@ -39,7 +39,7 @@ def next_wake(now):
 
 def make_image():
     # Firmware expects portrait pixel storage even for landscape display.
-    im = Image.new("RGB", (1200, 1600), "#faf8f0")
+    im = Image.new("RGB", (1600, 1200), "#faf8f0")
     d = ImageDraw.Draw(im)
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 58)
@@ -52,8 +52,8 @@ def make_image():
     d.text((100, 380), datetime.now(TZ).strftime("%d.%m.%Y %H:%M"), font=small, fill="#536772")
     d.text((100, 500), "Kalender, Wetter und Immich folgen.", font=small, fill="#536772")
     # Landscape: clockwise rotation of content into portrait storage.
-    im = im.rotate(270, expand=False)
-    # Above rotation on portrait canvas keeps portrait dimensions; intended as a test image.
+    im = im.rotate(270, expand=True)
+    # Store landscape content as portrait pixels as required by firmware.
     path = OUT / "dashboard_L.jpg"
     im.save(path, "JPEG", quality=88, progressive=False, subsampling=0)
     return path
@@ -80,7 +80,7 @@ class Handler(BaseHTTPRequestHandler):
         args = parse_qs(path.query)
         if path.path == "/health":
             return self.reply(200, {"ok": True})
-        if not self.authorized():
+        if path.path == "/images/dashboard_L.jpg" and hmac.compare_digest(args.get("token", [""])[0], TOKEN) and TOKEN:\n            image = OUT / "dashboard_L.jpg"\n            if not image.exists():\n                make_image()\n            return self.send_bytes(200, image.read_bytes(), "image/jpeg")\n        if not self.authorized():
             return self.reply(401, {"status": 401, "message": "Unauthorized"})
         if path.path == "/eink_pull":
             device = args.get("device_id", [""])[0]
@@ -96,7 +96,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {
                 "status": 200, "type": "SHOW", "message": "Image available",
                 "data": {"next_cron_time": iso(next_wake(now)),
-                         "image_url": PUBLIC_URL + "/images/dashboard_L.jpg"}
+                         "image_url": PUBLIC_URL + "/images/dashboard_L.jpg?token=" + TOKEN}
             })
         if path.path == "/eink_signal":
             pull = args.get("pull_id", [""])[0]

@@ -2,13 +2,28 @@
   "manifestVersion": 1,
   "id": "yuvomi-bloomin8",
   "name": "BLOOMIN8 E-Ink",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "description": "E-Ink-Tagesansicht für den BLOOMIN8-Familienrahmen",
   "entry": "index.js",
   "style": "style.css",
+  "icon": "monitor",
+  "accent": "#49636D",
   "menu": {
-    "label": "BLOOMIN8"
+    "show": true,
+    "label": "BLOOMIN8",
+    "icon": "monitor",
+    "order": 95
   },
   "page": {
-    "title": "BLOOMIN8 E-Ink"
+    "composition": "dashboard",
+    "width": "wide",
+    "navigation": "standard",
+    "responsive": "standard"
+  },
+  "settings": {
+    "entry": "settings.js",
+    "sections": [
+      "household"
+    ]
   }
 }

@@ -10,7 +10,7 @@ from io import BytesIO
 from urllib.parse import parse_qs, quote, urlsplit
 from zoneinfo import ZoneInfo
 
-from PIL import Image, ImageDraw, ImageFont
+from daily_dashboard import render as render_daily_dashboard
 
 TOKEN = os.environ.get("EINK_PULL_TOKEN", "")
 DEVICE_ID = os.environ.get("EINK_DEVICE_ID", "")
@@ -50,24 +50,7 @@ def next_wake(now):
 
 def render_image(now=None):
     now = now or datetime.now(timezone.utc)
-    # Draw landscape content at 1600x1200; store as portrait 1200x1600.
-    img = Image.new("RGB", (1600, 1200), "#faf8f0")
-    draw = ImageDraw.Draw(img)
-    try:
-        big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 76)
-        small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 43)
-    except OSError:
-        big = small = ImageFont.load_default()
-    draw.rectangle((45, 45, 1555, 1155), outline="#49636d", width=6)
-    draw.text((110, 125), "Yuvomi BLOOMIN8", font=big, fill="#213e4a")
-    draw.text((110, 320), "Hardware-Verbindungstest", font=small, fill="#213e4a")
-    draw.text((110, 430), now.astimezone(TZ).strftime("%d.%m.%Y  %H:%M"), font=small, fill="#213e4a")
-    draw.text((110, 620), "Wenn du das lesen kannst, funktioniert der Pull.", font=small, fill="#213e4a")
-    draw.text((110, 720), "Kalender, Wetter und Fotos folgen spaeter.", font=small, fill="#213e4a")
-    img = img.rotate(270, expand=True)
-    output = BytesIO()
-    img.save(output, "JPEG", quality=85, progressive=False, subsampling=0)
-    return output.getvalue()
+    return render_daily_dashboard(now.astimezone(TZ))
 
 
 def signature(exp):

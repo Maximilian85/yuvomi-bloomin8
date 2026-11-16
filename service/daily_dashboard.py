@@ -34,7 +34,6 @@ def render(now):
     months = ["Januar", "Februar", "März", "April", "Mai", "Juni",
               "Juli", "August", "September", "Oktober", "November", "Dezember"]
     text(d, (55, 36), f"{weekdays[local.weekday()]}, {local.day}. {months[local.month-1]}", 66, True)
-    text(d, (1280, 42), local.strftime("%H:%M"), 76, True)
     d.line((55, 155, 1545, 155), fill=INK, width=5)
     panel(d, (55, 185, 970, 850), "Heute in der Familie")
     text(d, (90, 320), "Noch keine Kalender verbunden", 47, True)
@@ -47,7 +46,7 @@ def render(now):
     text(d, (1035, 758), "Noch nicht verbunden", 31)
     panel(d, (55, 880, 1545, 1130), "Familiennotizen")
     text(d, (90, 990), "Das erste Yuvomi-Tagesdashboard ist bereit.", 39)
-    text(d, (1120, 1150), "YUVOMI  ·  TAGESANSICHT", 22, True, MUTED)
+    text(d, (1070, 1150), "Aktualisiert: " + local.strftime("%H:%M") + " Uhr", 26, False, MUTED)
     # BLOOMIN8 expects a portrait JPEG containing the rotated landscape layout.
     img = img.rotate(270, expand=True)
     out = BytesIO()

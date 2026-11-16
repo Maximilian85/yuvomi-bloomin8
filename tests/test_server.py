@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 import threading
+import sys
 import unittest
 from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer
@@ -14,6 +15,7 @@ from unittest.mock import patch
 os.environ["EINK_PULL_TOKEN"] = "test-secret-long-enough-for-tests"
 os.environ["EINK_PUBLIC_URL"] = "http://127.0.0.1:8088"
 os.environ["EINK_DEVICE_ID"] = ""
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "service"))
 spec = importlib.util.spec_from_file_location("eink_server", Path(__file__).resolve().parents[1] / "service" / "server.py")
 server = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
@@ -26,6 +28,12 @@ class LogicTests(unittest.TestCase):
         self.assertEqual(img.size, (1200, 1600))
         self.assertEqual(img.mode, "RGB")
         self.assertFalse(img.info.get("progressive", False))
+
+    def test_yuvomi_events_are_rendered(self):
+        with patch.object(server, "events_for_day", return_value=([{"title": "Zahnarzt", "start_datetime": "2026-11-16T10:30:00", "assigned_color": "#FF0000"}], None)):
+            from PIL import Image
+            image = Image.open(BytesIO(server.render_image()))
+            self.assertEqual(image.size, (1200, 1600))
 
     def test_night_pause(self):
         now = datetime(2026, 11, 14, 20, 45, tzinfo=server.TZ)

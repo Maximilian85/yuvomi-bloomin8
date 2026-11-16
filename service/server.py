@@ -98,10 +98,16 @@ class Handler(BaseHTTPRequestHandler):
         now = datetime.now(timezone.utc)
         if parsed.path == "/health":
             return self.json(200, {"ok": True})
+        if parsed.path == "/diagnostics":
+            if not self.authorized():
+                return self.json(401, {"error": "Unauthorized"})
+            return self.json(200, {"ready": True, "yuvomi_configured": bool(__import__("yuvomi_client").URL and __import__("yuvomi_client").API_TOKEN), "public_url_configured": bool(PUBLIC_URL), "night_pause": sleeping(now), "next_wake": iso(next_wake(now))})
         if parsed.path == "/images/dashboard_L.jpg":
             if not valid_image_link(params, now):
                 return self.json(403, {"error": "Invalid or expired image link"})
-            return self.send_bytes(200, render_image(now), "image/jpeg")
+            jpeg = render_image(now)
+            self.log_message("image delivered bytes=%d", len(jpeg))
+            return self.send_bytes(200, jpeg, "image/jpeg")
         if not self.authorized():
             return self.json(401, {"error": "Unauthorized"})
         if parsed.path == "/eink_pull":
@@ -118,10 +124,12 @@ class Handler(BaseHTTPRequestHandler):
                 for key, timestamp in list(_feedback.items()):
                     if now - timestamp > timedelta(hours=2):
                         _feedback.pop(key, None)
-            self.log_message("pull from device_id=%s battery=%s", device, params.get("battery", ["?"])[0])
+            self.log_message("pull received battery=%s", params.get("battery", ["?"])[0])
             if sleeping(now):
+                self.log_message("pull action=PAUSE next=%s", iso(next_wake(now)))
                 return self.json(200, {"status": 204, "message": "Night pause",
                                        "data": {"next_cron_time": iso(next_wake(now))}})
+            self.log_message("pull action=SHOW image_path=/images/dashboard_L.jpg next=%s", iso(next_wake(now)))
             return self.json(200, {"status": 200, "type": "SHOW",
                                    "data": {"next_cron_time": iso(next_wake(now)),
                                             "image_url": image_url(now)}})
@@ -130,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
             with _lock:
                 exists = pull in _feedback
                 _feedback.pop(pull, None)
-            self.log_message("signal pull_id=%s success=%s known=%s", pull,
+            self.log_message("signal success=%s known=%s",
                              params.get("success", ["?"])[0], exists)
             return self.json(200, {"status": 200, "message": "Feedback recorded"})
         return self.json(404, {"error": "Not found"})

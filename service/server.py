@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, quote, urlsplit
 from zoneinfo import ZoneInfo
 
 from daily_dashboard import render as render_daily_dashboard
+from yuvomi_client import events_for_day
 
 TOKEN = os.environ.get("EINK_PULL_TOKEN", "")
 DEVICE_ID = os.environ.get("EINK_DEVICE_ID", "")
@@ -50,7 +51,9 @@ def next_wake(now):
 
 def render_image(now=None):
     now = now or datetime.now(timezone.utc)
-    return render_daily_dashboard(now.astimezone(TZ))
+    local = now.astimezone(TZ)
+    events, error = events_for_day(local)
+    return render_daily_dashboard(local, events, error)
 
 
 def signature(exp):

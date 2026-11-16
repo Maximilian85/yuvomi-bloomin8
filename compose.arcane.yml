@@ -1,15 +1,27 @@
-# Arcane: paste as a separate stack. Publish the GHCR package publicly first.
+# Arcane Git stack: Compose file at repository root, build context ./service.
+# No registry publishing is required.
 services:
   yuvomi-bloomin8:
-    image: ghcr.io/maximilian85/yuvomi-bloomin8:latest
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    image: yuvomi-bloomin8:latest
     restart: unless-stopped
     ports:
       - "8088:8088"
     environment:
       TZ: Europe/Berlin
-      EINK_PULL_TOKEN: ${EINK_PULL_TOKEN:?Set a random token of at least 24 characters}
+      YUVOMI_URL: ${YUVOMI_URL:?Set the internal Yuvomi URL, e.g. http://192.168.0.2:3000}
+      YUVOMI_API_TOKEN: ${YUVOMI_API_TOKEN:?Create a read-only calendar API token in Yuvomi}
+      EINK_PULL_TOKEN: ${EINK_PULL_TOKEN:?Use your existing BLOOMIN8 device token}
       EINK_DEVICE_ID: ${EINK_DEVICE_ID:-}
       EINK_PUBLIC_URL: ${EINK_PUBLIC_URL:?Set http://SYNOLOGY_LAN_IP:8088}
       EINK_INTERVAL_MINUTES: "30"
       EINK_NIGHT_START: "21"
       EINK_NIGHT_END: "6"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health',timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

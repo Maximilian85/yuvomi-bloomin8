@@ -1,6 +1,11 @@
 FROM python:3.12-slim
 WORKDIR /app
-RUN pip install --no-cache-dir pillow==11.3.0 && mkdir -p /app/data
+# Pillow's large text needs a real TrueType font; without it, the image
+# silently falls back to a tiny bitmap font on the e-ink display.
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir pillow==11.3.0 \
+    && mkdir -p /app/data
 COPY server.py /app/server.py
 EXPOSE 8088
 CMD ["python", "/app/server.py"]

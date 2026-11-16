@@ -98,6 +98,10 @@ class Handler(BaseHTTPRequestHandler):
         now = datetime.now(timezone.utc)
         if parsed.path == "/health":
             return self.json(200, {"ok": True})
+        if parsed.path == "/diagnostics":
+            if not self.authorized():
+                return self.json(401, {"error": "Unauthorized"})
+            return self.json(200, {"ready": True, "yuvomi_configured": bool(__import__("yuvomi_client").URL and __import__("yuvomi_client").API_TOKEN), "public_url_configured": bool(PUBLIC_URL), "night_pause": sleeping(now), "next_wake": iso(next_wake(now))})
         if parsed.path == "/images/dashboard_L.jpg":
             if not valid_image_link(params, now):
                 return self.json(403, {"error": "Invalid or expired image link"})

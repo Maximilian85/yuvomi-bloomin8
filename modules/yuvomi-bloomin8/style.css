@@ -1,1 +1,7 @@
-.bloomin8 { max-width: 55rem; padding: 1.5rem; line-height: 1.6; }
+.bloomin8 { line-height: 1.6; }
+.bloomin8-events { list-style: none; margin: 1.5rem 0; padding: 0; display: grid; gap: .65rem; }
+.bloomin8-event { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border, #cbd5e1); border-radius: .75rem; }
+.bloomin8-event time { font-variant-numeric: tabular-nums; min-width: 5.5rem; font-weight: 700; }
+.bloomin8-event small { display: block; opacity: .7; }
+.bloomin8-dot { width: .6rem; height: 2.5rem; border-radius: .3rem; flex: none; }
+.bloomin8-note { opacity: .75; font-size: .9rem; }

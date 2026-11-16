@@ -6,6 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-co
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir pillow==11.3.0 \
     && mkdir -p /app/data
-COPY server.py /app/server.py
+COPY server.py daily_dashboard.py /app/
 EXPOSE 8088
 CMD ["python", "/app/server.py"]

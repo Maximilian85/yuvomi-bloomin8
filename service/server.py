@@ -7,7 +7,8 @@ import threading
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
-from urllib.parse import parse_qs, quote, urlsplit
+from urllib.parse import parse_qs, urlsplit
+from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from daily_dashboard import render as render_daily_dashboard
@@ -16,6 +17,7 @@ from yuvomi_client import events_for_day
 TOKEN = os.environ.get("EINK_PULL_TOKEN", "")
 DEVICE_ID = os.environ.get("EINK_DEVICE_ID", "")
 PUBLIC_URL = os.environ.get("EINK_PUBLIC_URL", "").rstrip("/")
+DEVICE_URL = os.environ.get("EINK_DEVICE_URL", "").rstrip("/")
 TZ = ZoneInfo(os.environ.get("TZ", "Europe/Berlin"))
 INTERVAL = max(5, int(os.environ.get("EINK_INTERVAL_MINUTES", "30")))
 NIGHT_START = int(os.environ.get("EINK_NIGHT_START", "21"))
@@ -74,6 +76,55 @@ def valid_image_link(params, now):
         return False
 
 
+
+def push_dashboard_to_device():
+    """Use the device's documented upload + show APIs as a reliable LAN fallback."""
+    jpeg = render_image()
+    boundary = "bloomin8-dashboard-upload"
+    head = (
+        "--" + boundary + "\r\n"
+        'Content-Disposition: form-data; name="images"; filename="dashboard_L.jpg"\r\n'
+        "Content-Type: image/jpeg\r\n\r\n"
+    ).encode("ascii")
+    body = head + jpeg + ("\r\n--" + boundary + "--\r\n").encode("ascii")
+    upload = Request(
+        DEVICE_URL + "/image/uploadMulti?gallery=default&override=1",
+        data=body,
+        headers={"Content-Type": "multipart/form-data; boundary=" + boundary},
+        method="POST",
+    )
+    with urlopen(upload, timeout=60) as response:
+        if response.status != 200:
+            raise RuntimeError("Device upload returned HTTP " + str(response.status))
+        response.read()
+    payload = json.dumps({
+        "play_type": 0, "image": "/gallerys/default/dashboard_L.jpg"
+    }).encode("utf-8")
+    show = Request(
+        DEVICE_URL + "/show", data=payload,
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    with urlopen(show, timeout=60) as response:
+        if response.status != 200:
+            raise RuntimeError("Device show returned HTTP " + str(response.status))
+        response.read()
+    print("device push successful bytes=" + str(len(jpeg)), flush=True)
+
+
+def device_push_loop():
+    """Refresh during daytime; keep the existing night pause."""
+    import time
+    while True:
+        now = datetime.now(timezone.utc)
+        if not sleeping(now):
+            try:
+                push_dashboard_to_device()
+            except Exception as exc:
+                print("device push failed: " + str(exc), flush=True)
+        wake = next_wake(datetime.now(timezone.utc))
+        time.sleep(max(1, (wake - datetime.now(timezone.utc)).total_seconds()))
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -130,7 +181,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json(200, {"status": 204, "message": "Night pause",
                                        "data": {"next_cron_time": iso(next_wake(now))}})
             self.log_message("pull action=SHOW image_path=/images/dashboard_L.jpg next=%s", iso(next_wake(now)))
-            return self.json(200, {"status": 200, "type": "SHOW",
+            return self.json(200, {"status": 200, "type": "SHOW", "message": "Image retrieved successfully",
                                    "data": {"next_cron_time": iso(next_wake(now)),
                                             "image_url": image_url(now)}})
         if parsed.path == "/eink_signal":
@@ -153,4 +204,8 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     if not TOKEN or len(TOKEN) < 24 or not PUBLIC_URL.startswith(("http://", "https://")):
         raise SystemExit("Set EINK_PULL_TOKEN (>=24 chars) and EINK_PUBLIC_URL")
+    if DEVICE_URL:
+        if not DEVICE_URL.startswith(("http://", "https://")):
+            raise SystemExit("EINK_DEVICE_URL must start with http:// or https://")
+        threading.Thread(target=device_push_loop, daemon=True, name="device-push").start()
     ThreadingHTTPServer(("0.0.0.0", 8088), Handler).serve_forever()

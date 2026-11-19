@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "id": "yuvomi-bloomin8",
   "name": "BLOOMIN8 E-Ink",
-  "version": "1.0.0",
-  "description": "Tagesansicht aus Yuvomi für BLOOMIN8-E-Ink-Familienrahmen",
+  "version": "1.1.0",
+  "description": "Konfigurierbare Layout-Vorschau für BLOOMIN8 E-Ink mit geplantem Immich-Fotomodus",
   "entry": "index.js",
   "style": "style.css",
   "settings": {

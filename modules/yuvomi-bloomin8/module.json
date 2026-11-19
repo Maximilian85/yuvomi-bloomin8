@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "id": "yuvomi-bloomin8",
   "name": "BLOOMIN8 E-Ink",
-  "version": "1.1.0",
-  "description": "Konfigurierbare Layout-Vorschau für BLOOMIN8 E-Ink mit geplantem Immich-Fotomodus",
+  "version": "1.2.0",
+  "description": "Visueller BLOOMIN8 Dashboard-Designer mit Live-Vorschau und Gerätekonfiguration (Entwurfsmodus)",
   "entry": "index.js",
   "style": "style.css",
   "settings": {

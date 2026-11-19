@@ -82,11 +82,11 @@ def push_dashboard_to_device():
     jpeg = render_image()
     boundary = "bloomin8-dashboard-upload"
     head = (
-        "--" + boundary + "\\r\\n"
-        'Content-Disposition: form-data; name="images"; filename="dashboard_L.jpg"\\r\\n'
-        "Content-Type: image/jpeg\\r\\n\\r\\n"
+        "--" + boundary + "\r\n"
+        'Content-Disposition: form-data; name="images"; filename="dashboard_L.jpg"\r\n'
+        "Content-Type: image/jpeg\r\n\r\n"
     ).encode("ascii")
-    body = head + jpeg + ("\\r\\n--" + boundary + "--\\r\\n").encode("ascii")
+    body = head + jpeg + ("\r\n--" + boundary + "--\r\n").encode("ascii")
     upload = Request(
         DEVICE_URL + "/image/uploadMulti?gallery=default&override=1",
         data=body,

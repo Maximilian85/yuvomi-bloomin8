@@ -111,7 +111,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self.authorized():
                 return self.json(401, {"error": "Unauthorized"})
             return self.json(200, {"ready": True, "yuvomi_configured": bool(__import__("yuvomi_client").URL and __import__("yuvomi_client").API_TOKEN), "public_url_configured": bool(PUBLIC_URL), "night_pause": sleeping(now), "next_wake": iso(next_wake(now))})
-        if re.fullmatch(r"/images/dashboard_\\d{8}_\\d{6}_L\\.jpg", parsed.path) or parsed.path == "/images/dashboard_L.jpg":
+        if re.fullmatch(r"/images/dashboard_\d{8}_\d{6}_L\.jpg", parsed.path) or parsed.path == "/images/dashboard_L.jpg":
             if not CLEAN_IMAGE_URL and not valid_image_link(params, now):
                 return self.json(403, {"error": "Invalid or expired image link"})
             jpeg = render_image(now)

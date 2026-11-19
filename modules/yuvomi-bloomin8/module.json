@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "id": "yuvomi-bloomin8",
   "name": "BLOOMIN8 E-Ink",
-  "version": "1.4.0",
-  "description": "Dashboard Studio mit Farbthemen, Kinder-Piktogrammen und Widget-Anordnung",
+  "version": "1.5.0",
+  "description": "Geführtes Dashboard Studio mit direkter Widget-Auswahl und Kinder-Motiv des Tages",
   "entry": "index.js",
   "style": "style.css",
   "settings": {

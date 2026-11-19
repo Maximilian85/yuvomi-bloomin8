@@ -20,13 +20,19 @@ function eventRow(event) {
     '</strong>' + (person ? '<small>' + esc(person) + '</small>' : '') + '</span></li>';
 }
 
+function layoutSettings() {
+  try { return JSON.parse(localStorage.getItem('yuvomi-bloomin8-layout-v1') || '{}'); }
+  catch { return {}; }
+}
 export async function render(container, context) {
+  const layout = layoutSettings();
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <div class="page-toolbar"><h1 class="page-toolbar__title">BLOOMIN8 E-Ink</h1></div>
     <div class="app-page__body">
       <section class="page-section page-measure bloomin8">
         <h2>Heute auf dem Familienrahmen</h2>
+        <div data-bloomin8-layout role="status"></div>
         <p>Diese Termine kommen direkt aus deinem Yuvomi-Kalender. Der E-Ink-Relay-Dienst
            verwendet denselben Kalender über einen eigenen, nur lesenden API-Zugang.</p>
         <div data-bloomin8-events role="status">Termine werden geladen …</div>
@@ -36,6 +42,12 @@ export async function render(container, context) {
            <strong>Einstellungen → Module → BLOOMIN8 E-Ink</strong> findest du die Installationshinweise.</p>
       </section>
     </div>`);
+  const preview = container.querySelector('[data-bloomin8-layout]');
+  const modeLabels = {dashboard:'Familien-Dashboard',photo:'Immich-Fotomodus',alternate:'Wechsel zwischen Dashboard und Fotomodus'};
+  preview.textContent = 'Lokale Layout-Vorschau: ' + (modeLabels[layout.mode] || modeLabels.dashboard) +
+    ' · Schriftgröße: ' + (layout.fontScale || 'normal') +
+    ' · Foto: ' + (layout.photoPlacement || 'right') +
+    '. Die E-Ink-Ausgabe wird noch nicht durch diese Einstellungen gesteuert.';
   const target = container.querySelector('[data-bloomin8-events]');
   const date = localDate();
   try {

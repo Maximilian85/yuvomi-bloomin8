@@ -5,3 +5,10 @@
 .bloomin8-event small { display: block; opacity: .7; }
 .bloomin8-dot { width: .6rem; height: 2.5rem; border-radius: .3rem; flex: none; }
 .bloomin8-note { opacity: .75; font-size: .9rem; }
+
+.bloomin8-settings-form { display: grid; gap: 1rem; margin: 1.5rem 0; max-width: 38rem; }
+.bloomin8-setting { display: grid; gap: .35rem; }
+.bloomin8-setting--check { display: block; }
+.bloomin8-setting select, .bloomin8-setting input[type=number] { width: 100%; padding: .65rem; border: 1px solid var(--border, #cbd5e1); border-radius: .5rem; background: var(--surface, #fff); color: inherit; }
+.bloomin8-settings-form button { padding: .7rem 1rem; border-radius: .5rem; cursor: pointer; }
+[data-bloomin8-layout] { padding: 1rem; border: 1px solid var(--border, #cbd5e1); border-radius: .6rem; margin: 1rem 0; }

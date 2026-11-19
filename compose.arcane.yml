@@ -15,8 +15,9 @@ services:
       YUVOMI_API_TOKEN: ${YUVOMI_API_TOKEN:?Create a read-only calendar API token in Yuvomi}
       EINK_PULL_TOKEN: ${EINK_PULL_TOKEN:?Use your existing BLOOMIN8 device token}
       EINK_DEVICE_ID: ${EINK_DEVICE_ID:-}
-      # Optional: proven upload + show API fallback for firmware that skips pull image downloads.
-      EINK_DEVICE_URL: ${EINK_DEVICE_URL:-}
+      # Optional LAN-only test: use a plain JPEG URL for firmware compatibility.
+      # Warning: image endpoint is then readable without a signature on the LAN.
+      EINK_CLEAN_IMAGE_URL: ${EINK_CLEAN_IMAGE_URL:-false}
       EINK_PUBLIC_URL: ${EINK_PUBLIC_URL:?Set http://SYNOLOGY_LAN_IP:8088}
       EINK_INTERVAL_MINUTES: "30"
       EINK_NIGHT_START: "21"

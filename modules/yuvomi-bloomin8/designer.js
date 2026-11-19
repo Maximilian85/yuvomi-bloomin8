@@ -27,4 +27,67 @@ function widgetEditor(state,refresh){
 }
 const guidedStyles='.b8-studio .b8-daily{font-size:1.35em;min-height:90px;text-align:center;display:grid;place-items:center}.b8-frame.kids .b8-tile{min-height:85px}.b8-frame.kids .b8-daily{font-size:1.7em}.b8-studio .b8-template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.b8-studio .b8-template-card{padding:15px;border:2px solid #91a9ad;border-radius:12px;background:transparent;color:inherit;text-align:left;cursor:pointer;display:grid;gap:5px}.b8-studio .b8-template-card[aria-pressed=true]{border-color:#2784a2;background:rgba(70,145,170,.13)}.b8-studio .b8-template-card span{font-size:1.8rem}.b8-studio .b8-widget-selected{outline:3px solid #248bb1;outline-offset:-3px}.b8-studio .b8-preview .b8-tile{cursor:pointer}.b8-studio .b8-nav button{min-height:42px}';
 const themeStyles='.b8-studio .b8-input{background:#fff!important;color:#172b33!important;color-scheme:light!important;border-color:#829ba2!important}.b8-studio .b8-input option{background:#fff!important;color:#172b33!important}.b8-studio .b8-input:focus-visible{outline:3px solid #4a91bc;outline-offset:2px}.b8-frame.b8-theme-ocean{background:#e7f3fa;color:#123b60}.b8-frame.b8-theme-forest{background:#e7f2e5;color:#214c32}.b8-frame.b8-theme-sunny{background:#fff2cf;color:#704408}.b8-frame.b8-theme-berry{background:#f5e5f5;color:#542a63}.b8-frame.b8-theme-kids{background:#fff0d6;color:#493c2a}.b8-frame.b8-theme-kids .b8-tile{border:2px solid #e4b264;background:#fffaf0}.b8-frame.b8-theme-mono{background:white;color:black;filter:grayscale(1)}.b8-widgetrow{display:flex;align-items:center;gap:8px;margin:6px 0;padding:7px;border:1px solid #9baeb1;border-radius:8px}.b8-widgetrow span{flex:1}.b8-widgetrow button{border:1px solid #829ba2;border-radius:6px;background:transparent;color:inherit;padding:5px 9px;cursor:pointer}.b8-widgetrow button:disabled{opacity:.3}.b8-widgetrow select{max-width:105px}';
-export function mountDesigner(container,{signal}={}){const state=read(),root=el('div','b8-studio'),style=el('style');style.textContent=styles+extraStyles+themeStyles+guidedStyles;state.widgetOrder=Array.isArray(state.widgetOrder)?[...new Set(state.widgetOrder.filter(k=>defaults.widgetOrder.includes(k)))]:[...defaults.widgetOrder];for(const key of defaults.widgetOrder)if(!state.widgetOrder.includes(key))state.widgetOrder.push(key);state.widgetSizes={...state.widgetSizes};root.append(style);root.append(el('h2','','Dashboard Studio'),el('p','b8-muted','Visueller Editor für den 13,3-Zoll-Familienrahmen. Änderungen bleiben zunächst Entwürfe.'));const tabs=el('div','b8-tabs');tabs.setAttribute('role','tablist');const columns=el('div','b8-columns'),fields=el('div'),side=el('aside','b8-preview');side.append(el('h3','','Live-Vorschau'));const visual=el('div');side.append(visual,el('p','b8-muted','Beispieldaten · noch keine Übertragung zum Gerät'));columns.append(fields,side);const actions=el('div','b8-actions'),save=el('button','b8-button b8-primary','Entwurf speichern'),reset=el('button','b8-button','Zurücksetzen'),status=el('p','b8-status');status.setAttribute('role','status');save.type=reset.type='button';actions.append(save,reset);root.append(tabs,columns,actions,status);let active='layout';function collect(){for(const input of fields.querySelectorAll('[name]')){const key=input.name;state[key]=typeof defaults[key]==='boolean'?input.checked:typeof defaults[key]==='number'?Number(input.value):input.value;}preview(visual,state);}function show(tab){active=tab;for(const b of tabs.querySelectorAll('button'))b.setAttribute('aria-selected',String(b.dataset.tab===tab));fields.replaceChildren();if(tab==='layout')fields.append(section('Darstellung','Vorlagen, Typografie und Kontrast.',['mode','theme','template','orientation','fontScale','contrast','spacing','showDivider'],state));if(tab==='content')fields.append(section('Dashboard-Inhalte','Bereiche ein- oder ausblenden.',['showCalendar','calendarView','calendarLimit','showAllDay','showBirthdays','showClock','showNotes','showWeather','weatherDays','showFeelsLike','showTimetable','showTasks','showClothing'],state));if(tab==='content')fields.append(widgetEditor(state,()=>preview(visual,state)));if(tab==='photos'){fields.append(section('Immich-Fotos','Bestehende Yuvomi-Immich-Anbindung vorgesehen; Bilddaten noch nicht angeschlossen.',['photoPlacement','photoFit','photoInterval','rotationMinutes','photoGrayscale','photoOpacity','showPhotoCaption'],state));fields.append(el('p','b8-muted','Kein zusätzlicher Immich-Token nötig. Die tatsächliche Album- und Bildauswahl folgt mit der Yuvomi-API-Anbindung.'));}if(tab==='device'){fields.append(section('Rahmen und Pull','Diese Werte sind Entwürfe. Der aktive Docker-Zeitplan bleibt unverändert.',['intervalMinutes','nightEnabled','nightStart','nightEnd','imageQuality','showBattery','showLastPull','showNextPull'],state));fields.append(el('p','b8-muted','Aktiv im Relay: 30 Minuten und Nachtpause 21–06 Uhr.'));}preview(visual,state);}for(const [id,title] of [['layout','Layout'],['content','Inhalte'],['photos','Immich-Fotos'],['device','Rahmen']]){const b=el('button','b8-tab',title);b.type='button';b.dataset.tab=id;b.setAttribute('role','tab');b.addEventListener('click',()=>{collect();show(id);},{signal});tabs.append(b);}root.addEventListener('input',()=>{collect();status.textContent='Vorschau geändert – noch nicht gespeichert.';},{signal});save.addEventListener('click',()=>{collect();localStorage.setItem(KEY,JSON.stringify(state));status.textContent='Entwurf in diesem Browser gespeichert. Das E-Ink-Gerät bleibt unverändert.';},{signal});reset.addEventListener('click',()=>{Object.assign(state,defaults);localStorage.removeItem(KEY);show(active);status.textContent='Entwurf zurückgesetzt.';},{signal});container.replaceChildren(root);show(active);}
+export function mountDesigner(container){
+ const state=read(),root=el('div','b8-studio'),style=el('style');
+ style.textContent=styles+extraStyles+themeStyles+guidedStyles;
+ state.widgetOrder=Array.isArray(state.widgetOrder)?[...new Set(state.widgetOrder.filter(k=>defaults.widgetOrder.includes(k)))]:[...defaults.widgetOrder];
+ for(const key of defaults.widgetOrder)if(!state.widgetOrder.includes(key))state.widgetOrder.push(key);
+ state.widgetSizes={...state.widgetSizes};root.append(style);
+ root.append(el('h2','','BLOOMIN8 Studio'),el('p','b8-muted','Vorlage wählen → Design anpassen → Widgets gestalten → Vorschau prüfen'));
+ const tabs=el('nav','b8-tabs'),columns=el('div','b8-columns'),fields=el('div'),side=el('aside','b8-preview'),visual=el('div');
+ side.append(el('h3','','Dein Bildschirm'),visual,el('p','b8-muted','Beispieldaten · Noch keine Übertragung an den Rahmen'));
+ columns.append(fields,side);
+ const actions=el('div','b8-actions'),save=el('button','b8-button b8-primary','Entwurf speichern'),reset=el('button','b8-button','Zurücksetzen'),status=el('p','b8-status');
+ save.type=reset.type='button';status.setAttribute('role','status');actions.append(save,reset);root.append(tabs,columns,actions,status);
+ let active='template',selected='calendar';
+ function update(){preview(visual,state);bindTiles();status.textContent='Vorschau geändert – noch nicht gespeichert.';}
+ function bindTiles(){for(const tile of visual.querySelectorAll('.b8-tile')){const id=tile.dataset.widget;if(!id||id==='other')continue;tile.classList.toggle('b8-widget-selected',selected===id);tile.setAttribute('role','button');tile.setAttribute('tabindex','0');tile.setAttribute('aria-label',id+' bearbeiten');const open=()=>{selected=id;show('widgets');};tile.addEventListener('click',open);tile.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});}}
+ function collect(){for(const input of fields.querySelectorAll('[name]')){const key=input.name;if(!(key in defaults))continue;state[key]=typeof defaults[key]==='boolean'?input.checked:typeof defaults[key]==='number'?Number(input.value):input.value;}update();}
+ function selectedEditor(){
+  const map={calendar:['calendarView','calendarLimit','showAllDay'],photo:['photoPlacement','photoFit','photoInterval','showPhotoCaption'],weather:['weatherDays','showFeelsLike'],motif:['showDailyMotif','motifCategory','motifSeed']};
+  const labels={calendar:'📅 Kalender',photo:'🖼️ Foto',weather:'☀️ Wetter',birthdays:'🎂 Geburtstage',tasks:'✅ Aufgaben',clothing:'🧥 Kleidung',timetable:'🎒 Stundenplan',notes:'📝 Notizen',motif:'🦄 Motiv des Tages'};
+  const panel=el('section','b8-panel');panel.append(el('h3','',labels[selected]||'Widget'),el('p','b8-muted','Dieses Widget ist rechts in der Vorschau ausgewählt.'));
+  const size=el('label','b8-field');size.append(el('span','','Widget-Breite'));
+  const select=el('select','b8-input');for(const [v,label] of [['normal','Normal'],['wide','Breit']]){const opt=el('option','',label);opt.value=v;select.append(opt);}select.value=state.widgetSizes[selected]||'normal';
+  select.addEventListener('change',()=>{state.widgetSizes[selected]=select.value;update();});size.append(select);panel.append(size);
+  if(map[selected])panel.append(section('Widget-Optionen','',map[selected],state));
+  const index=state.widgetOrder.indexOf(selected),buttons=el('div','b8-actions');
+  for(const [label,offset] of [['↑ Nach oben',-1],['↓ Nach unten',1]]){const b=el('button','b8-button',label);b.type='button';b.disabled=index+offset<0||index+offset>=state.widgetOrder.length;b.addEventListener('click',()=>{const j=index+offset;[state.widgetOrder[index],state.widgetOrder[j]]=[state.widgetOrder[j],state.widgetOrder[index]];update();show('widgets');});buttons.append(b);}
+  panel.append(buttons);return panel;
+ }
+ function show(page){
+  active=page;tabs.replaceChildren();
+  for(const [id,title] of [['template','1 · Vorlage'],['design','2 · Design'],['widgets','3 · Gestalten'],['preview','4 · Vorschau'],['device','⚙ Rahmen']]){
+   const b=el('button','b8-tab',title);b.type='button';b.setAttribute('aria-selected',String(active===id));b.addEventListener('click',()=>{collect();show(id);});tabs.append(b);
+  }
+  fields.replaceChildren();
+  if(page==='template'){
+   const panel=el('section','b8-panel');panel.append(el('h3','','Wähle deine Dashboard-Vorlage'));
+   const grid=el('div','b8-template-grid');
+   for(const [id,icon,name,description] of [['family','🏠','Familie','Kalender, Fotos, Notizen'],['photo-focus','🖼️','Fotos','Bilder im Mittelpunkt'],['kids','🦄','Kinder','Große Symbole und tägliche Überraschung'],['minimal','◻️','Minimal','Einfach und übersichtlich']]){
+    const b=el('button','b8-template-card');b.type='button';b.setAttribute('aria-pressed',String(state.template===id));b.append(el('span','',icon),el('strong','',name),el('small','',description));
+    b.addEventListener('click',()=>{state.template=id;if(id==='kids'){state.theme='kids';state.showDailyMotif=true;state.showTasks=true;state.showNotes=false;state.widgetSizes.motif='wide';}update();show('template');});grid.append(b);
+   }
+   panel.append(grid);fields.append(panel,section('Bildschirmmodus','', ['mode'],state));
+  }
+  if(page==='design')fields.append(section('Farben und Darstellung','Wähle das Aussehen deines Dashboards.',['theme','orientation','fontScale','contrast','spacing','showDivider'],state));
+  if(page==='widgets'){
+   fields.append(el('p','b8-muted','Klicke ein Widget in der Vorschau an, um seine Einstellungen zu öffnen.'));
+   fields.append(section('Inhalte ein- und ausblenden','',['showCalendar','showBirthdays','showNotes','showWeather','showTimetable','showTasks','showClothing','showDailyMotif'],state));
+   fields.append(selectedEditor());
+  }
+  if(page==='preview'){
+   fields.append(section('Vorschau und Bildschirmmodus','Die Vorschau zeigt Beispieldaten, kein gerendertes Gerätebild.',['mode','showClock'],state));
+   if(state.template==='kids')fields.append(section('Tägliche Überraschung','Das Motiv bleibt pro Berliner Kalendertag gleich.',['showDailyMotif','motifCategory','motifSeed'],state));
+  }
+  if(page==='device'){
+   fields.append(section('Gerät und Aktualisierung','Entwurfswerte: Der aktive Docker-Relay bleibt unverändert.',['intervalMinutes','nightEnabled','nightStart','nightEnd','imageQuality','showBattery','showLastPull','showNextPull'],state));
+  }
+  update();
+ }
+ fields.addEventListener('input',collect);
+ fields.addEventListener('change',collect);
+ save.addEventListener('click',()=>{collect();try{localStorage.setItem(KEY,JSON.stringify(state));status.textContent='Lokal gespeichert. Der Rahmen bleibt unverändert.';}catch{status.textContent='Speichern im Browser fehlgeschlagen.';}});
+ reset.addEventListener('click',()=>{Object.assign(state,defaults,{widgetOrder:[...defaults.widgetOrder],widgetSizes:{}});localStorage.removeItem(KEY);selected='calendar';show('template');status.textContent='Entwurf zurückgesetzt.';});
+ container.replaceChildren(root);show('template');
+}

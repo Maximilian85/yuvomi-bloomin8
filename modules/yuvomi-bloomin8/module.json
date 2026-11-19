@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "id": "yuvomi-bloomin8",
   "name": "BLOOMIN8 E-Ink",
-  "version": "1.3.0",
-  "description": "Visueller BLOOMIN8 Dashboard-Designer mit Live-Vorschau und Gerätekonfiguration (Entwurfsmodus)",
+  "version": "1.4.0",
+  "description": "Dashboard Studio mit Farbthemen, Kinder-Piktogrammen und Widget-Anordnung",
   "entry": "index.js",
   "style": "style.css",
   "settings": {

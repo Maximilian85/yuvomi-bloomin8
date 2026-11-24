@@ -22,6 +22,7 @@ services:
       EINK_INTERVAL_MINUTES: "30"
       EINK_NIGHT_START: "21"
       EINK_NIGHT_END: "6"
+      EINK_UI_ORIGIN: ${EINK_UI_ORIGIN:-}
       EINK_SETTINGS_TOKEN: ${EINK_SETTINGS_TOKEN:-}
     volumes:
       - dashboard-settings:/data

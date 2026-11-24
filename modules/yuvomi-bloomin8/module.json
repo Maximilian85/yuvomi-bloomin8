@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "yuvomi-bloomin8",
   "name": "BLOOMIN8 E-Ink",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Korrigierte Dashboard-Vorlagen, optionales Immich-Foto und besser lesbarer Kalender",
   "entry": "index.js",
   "style": "style.css",
@@ -25,5 +25,16 @@
     "width": "wide",
     "navigation": "standard",
     "responsive": "standard"
+  },
+  "capabilities": {
+    "permissions": {
+      "module": {
+        "label": "BLOOMIN8",
+        "icon": "monitor"
+      }
+    },
+    "api": {
+      "prefix": "/api/extensions/yuvomi-bloomin8"
+    }
   }
 }

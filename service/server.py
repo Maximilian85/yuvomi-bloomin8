@@ -1,5 +1,17 @@
 """Minimal BLOOMIN8 pull server for a LAN-only hardware smoke test."""
 import hashlib
+import secrets
+from http.cookies import SimpleCookie
+from urllib.request import Request, build_opener, HTTPRedirectHandler
+from yuvomi_client import URL as YUVOMI_URL
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+PREFIX = '/api/extensions/yuvomi-bloomin8'
+ORIGIN = os.environ.get('EINK_UI_ORIGIN', '').rstrip('/')
+
 import hmac
 import json
 import os
@@ -103,7 +115,61 @@ class Handler(BaseHTTPRequestHandler):
     def authorized(self):
         return hmac.compare_digest(self.headers.get("X-Access-Token", ""), TOKEN)
 
+    def extension(self):
+        self.close_connection = True
+        path = urlsplit(self.path).path
+        if not ORIGIN or not ORIGIN.startswith('https://'):
+            return self.json(503, {'error': 'UI origin not configured'})
+        cookie = self.headers.get('Cookie', '')
+        if not cookie:
+            return self.json(401, {'error': 'Session required'})
+        try:
+            req = Request(YUVOMI_URL.rstrip('/') + '/api/v1/auth/me', headers={'Cookie': cookie, 'Accept': 'application/json'})
+            with build_opener(NoRedirect()).open(req, timeout=5) as response:
+                identity = json.load(response)
+            identity = identity.get('data', identity)
+            user = identity.get('user', {})
+            permissions = identity.get('permissions', user.get('permissions', {}))
+            access = permissions.get('modules', {}).get('ext:yuvomi-bloomin8')
+            if access not in ('read', 'write', 'full') or user.get('role') != 'admin':
+                return self.json(403, {'error': 'Administrator and module permission required'})
+        except Exception:
+            return self.json(401, {'error': 'Session verification failed'})
+        if self.command == 'GET' and path == PREFIX + '/settings':
+            csrf = secrets.token_urlsafe(32)
+            data = json.dumps({'settings': dashboard_settings.load(), 'csrf': csrf, 'writable': access in ('write', 'full')}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Set-Cookie', 'b8_csrf=' + csrf + '; Secure; HttpOnly; SameSite=Strict; Path=' + PREFIX + '/')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if self.command == 'GET' and path == PREFIX + '/preview':
+            return self.send_bytes(200, render_image(), 'image/jpeg')
+        if self.command == 'PUT' and path == PREFIX + '/settings':
+            if access not in ('write', 'full') or self.headers.get('Origin') != ORIGIN:
+                return self.json(403, {'error': 'Write denied'})
+            try:
+                cookies = SimpleCookie(cookie)
+                token = cookies['b8_csrf'].value
+                if not token or not hmac.compare_digest(token, self.headers.get('X-B8-CSRF', '')):
+                    return self.json(403, {'error': 'CSRF denied'})
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 8192:
+                    raise ValueError()
+                return self.json(200, dashboard_settings.save(json.loads(self.rfile.read(size))))
+            except (ValueError, KeyError, TypeError):
+                return self.json(400, {'error': 'Invalid settings'})
+            except OSError:
+                return self.json(500, {'error': 'Storage unavailable'})
+        return self.json(404, {'error': 'Not found'})
+
     def dispatch(self):
+        if urlsplit(self.path).path.startswith(PREFIX + '/'):
+            return self.extension()
+
         parsed = urlsplit(self.path)
         params = parse_qs(parsed.query)
         now = datetime.now(timezone.utc)
@@ -162,6 +228,9 @@ class Handler(BaseHTTPRequestHandler):
         return len(ADMIN_TOKEN) >= 24 and hmac.compare_digest(self.headers.get('X-Settings-Token', ''), ADMIN_TOKEN)
 
     def do_PUT(self):
+        self.close_connection = True
+        if urlsplit(self.path).path.startswith(PREFIX + '/'):
+            return self.extension()
         if urlsplit(self.path).path != '/dashboard-settings':
             return self.json(404, {'error': 'Not found'})
         if not self.settings_authorized():

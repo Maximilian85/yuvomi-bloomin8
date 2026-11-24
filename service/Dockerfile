@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-co
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir pillow==11.3.0 \
     && mkdir -p /app/data
-COPY server.py daily_dashboard.py yuvomi_client.py /app/
+COPY server.py daily_dashboard.py yuvomi_client.py dashboard_settings.py /app/
+RUN python -m compileall -q /app && python -c "import server; import dashboard_settings"
 EXPOSE 8088
 CMD ["python", "/app/server.py"]

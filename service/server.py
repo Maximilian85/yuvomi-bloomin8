@@ -13,6 +13,8 @@ from zoneinfo import ZoneInfo
 
 from daily_dashboard import render as render_daily_dashboard
 from yuvomi_client import events_for_day
+import dashboard_settings
+ADMIN_TOKEN = os.environ.get('EINK_SETTINGS_TOKEN', '')
 
 TOKEN = os.environ.get("EINK_PULL_TOKEN", "")
 DEVICE_ID = os.environ.get("EINK_DEVICE_ID", "")
@@ -55,7 +57,7 @@ def render_image(now=None):
     now = now or datetime.now(timezone.utc)
     local = now.astimezone(TZ)
     events, error = events_for_day(local)
-    return render_daily_dashboard(local, events, error)
+    return render_daily_dashboard(local, events, error, dashboard_settings.load())
 
 
 def signature(exp):
@@ -105,6 +107,10 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlsplit(self.path)
         params = parse_qs(parsed.query)
         now = datetime.now(timezone.utc)
+        if parsed.path == "/dashboard-settings":
+            if not self.settings_authorized():
+                return self.json(401, {"error": "Unauthorized"})
+            return self.json(200, dashboard_settings.load())
         if parsed.path == "/health":
             return self.json(200, {"ok": True})
         if parsed.path == "/diagnostics":
@@ -151,6 +157,25 @@ class Handler(BaseHTTPRequestHandler):
                              params.get("success", ["?"])[0], exists)
             return self.json(200, {"status": 200, "message": "Feedback recorded"})
         return self.json(404, {"error": "Not found"})
+
+    def settings_authorized(self):
+        return len(ADMIN_TOKEN) >= 24 and hmac.compare_digest(self.headers.get('X-Settings-Token', ''), ADMIN_TOKEN)
+
+    def do_PUT(self):
+        if urlsplit(self.path).path != '/dashboard-settings':
+            return self.json(404, {'error': 'Not found'})
+        if not self.settings_authorized():
+            return self.json(401, {'error': 'Unauthorized'})
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 8192:
+                raise ValueError('Invalid length')
+            data = json.loads(self.rfile.read(size))
+            return self.json(200, dashboard_settings.save(data))
+        except (ValueError, TypeError):
+            return self.json(400, {'error': 'Invalid settings'})
+        except OSError:
+            return self.json(500, {'error': 'Storage unavailable'})
 
     def do_GET(self):
         self.dispatch()
